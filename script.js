@@ -6,7 +6,7 @@ const fileInput = promptForm.querySelector("#file-input");
 const fileUploadWrapper = promptForm.querySelector(".file-upload-wrapper");
 const themeToggle = document.querySelector("#theme-toggle-btn");
 
-const API_KEY = "AIzaSyAJOOJvtLeL57t_AlcX3-_qI0RbplTpJB0"
+const API_KEY = "AIzaSyAIn54QONdH5Qbaz97Q9-ndSAJGRd0mtWA"
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`
 
 let typingInterval, controller;
@@ -168,6 +168,7 @@ themeToggle.textContent = isLightTheme ? "dark_mode" : "light_mode";
 promptForm.addEventListener("submit", handleFormSubmit);
 
 promptForm.querySelector("#add-file-btn").addEventListener("click", () => fileInput.click());
+
 
 
 
