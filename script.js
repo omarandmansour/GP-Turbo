@@ -4,13 +4,13 @@ const promptForm = document.querySelector(".prompt-form");
 const promptInput = promptForm.querySelector(".prompt-input");
 const themeToggle = document.querySelector("#theme-toggle-btn");
 
-// 🔥 DeepSeek API
-const API_KEY = "sk-0f6fc870c9bc45a195cf1f0cd6c65e38";
+// DeepSeek API
+const API_KEY = "sk-e0545dc18d3c42069a916c1a2c27498c";
 const API_URL = "https://api.deepseek.com/chat/completions";
 
 let typingInterval, controller;
 
-const chatHistory = []; // DeepSeek uses {role, content}
+const chatHistory = [];
 
 const scrollToBottom = () =>
     container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
