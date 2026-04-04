@@ -172,9 +172,9 @@ const handleFormSubmit = (e) => {
 
     setTimeout(() => {
         const botMsgHTML = `
-        <img src="Images/b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
+        <img src="b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
         <p class="message-text">
-            <img src="Images/output-onlinegiftools.gif" style="width: 50px;">
+            <img src="output-onlinegiftools.gif" style="width: 50px;">
         </p>`;
 
         const botMsgDiv = createMsgElement(
