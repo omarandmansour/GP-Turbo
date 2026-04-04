@@ -461,3 +461,308 @@ body.bot-responding .prompt-form #stop-response-btn{
         background-position: 1049px 0;
     }
 }
+
+/* ============================= */
+/*   تحسينات جمالية إضافية      */
+/* ============================= */
+
+/* تأثير زجاجي على الرسائل */
+.chats-container .user-message .message-text,
+.chats-container .bot-message .message-text {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.3s ease;
+}
+
+/* ظل ناعم للرسائل */
+.chats-container .message .message-text {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* حركة دخول الرسائل */
+.message {
+    animation: fadeInUp 0.45s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* زر الإرسال بتوهج جميل */
+#send-prompt-btn {
+    box-shadow: 0 0 12px rgba(0, 115, 255, 0.6);
+}
+
+#send-prompt-btn:hover {
+    box-shadow: 0 0 18px rgba(0, 115, 255, 0.9);
+}
+
+/* تحسين شكل صندوق الكتابة */
+.prompt-wrapper .prompt-form {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* حركة خفيفة للأفاتار */
+.bot-message .avatar {
+    animation: floatAvatar 3s ease-in-out infinite;
+}
+
+@keyframes floatAvatar {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+}
+
+/* Scrollbar محسّن */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-color);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* تأثير Hover على الرسائل */
+.message:hover .message-text {
+    transform: scale(1.02);
+}
+
+/* تحسين شكل الاقتراحات */
+.suggestions .suggestions-item {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.suggestions .suggestions-item:hover {
+    transform: translateY(-4px) scale(0.97);
+}
+
+/* تحسين شكل الهيدر */
+.app-header .heading {
+    text-shadow: 0 0 18px rgba(0, 140, 255, 0.5);
+}
+
+/* تأثير بسيط على الخلفية */
+body {
+    background: linear-gradient(135deg, var(--primary-color), #0b0f19);
+}
+
+/* تحسين شكل الفاصل بين الرسائل */
+.chats-container .message {
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* ============================= */
+/*   تحسينات جمالية إضافية      */
+/* ============================= */
+
+/* تأثير زجاجي على الرسائل */
+.chats-container .user-message .message-text,
+.chats-container .bot-message .message-text {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.3s ease;
+}
+
+/* ظل ناعم للرسائل */
+.chats-container .message .message-text {
+    box-shadow:
+        0 0 12px rgba(0, 140, 255, 0.15),
+        0 0 24px rgba(0, 140, 255, 0.08),
+        0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* حركة دخول الرسائل */
+.message {
+    animation: fadeInUp 0.45s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* نبض خفيف لرسالة البوت */
+.bot-message .message-text {
+    animation: botPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes botPulse {
+    0% { box-shadow: 0 0 0 rgba(0, 140, 255, 0.2); }
+    50% { box-shadow: 0 0 14px rgba(0, 140, 255, 0.35); }
+    100% { box-shadow: 0 0 0 rgba(0, 140, 255, 0.2); }
+}
+
+/* تأثير كتابة بسيط */
+.message .message-text {
+    animation: typingFade 0.4s ease;
+}
+
+@keyframes typingFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* زر الإرسال بتوهج جميل */
+#send-prompt-btn {
+    box-shadow: 0 0 12px rgba(0, 115, 255, 0.6);
+}
+
+#send-prompt-btn:hover {
+    box-shadow: 0 0 18px rgba(0, 115, 255, 0.9);
+    transform: translateY(-2px);
+}
+
+/* تحسين شكل صندوق الكتابة */
+.prompt-wrapper .prompt-form {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 18px rgba(0,0,0,0.35);
+    transition: 0.3s ease;
+}
+
+.prompt-wrapper .prompt-form:focus-within {
+    transform: translateY(-3px);
+    box-shadow: 0 0 28px rgba(0,0,0,0.45);
+}
+
+/* حركة خفيفة للأفاتار */
+.bot-message .avatar {
+    animation: floatAvatar 3s ease-in-out infinite;
+}
+
+@keyframes floatAvatar {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+}
+
+/* Scrollbar محسّن */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-color);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* تأثير Hover على الرسائل */
+.message:hover .message-text {
+    transform: scale(1.02);
+}
+
+/* تحسين شكل الاقتراحات */
+.suggestions .suggestions-item {
+    transform: translateY(0);
+    transition: 0.25s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.suggestions .suggestions-item:hover {
+    transform: translateY(-6px) scale(0.97);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+}
+
+/* توهج جميل للعناوين */
+.app-header .heading {
+    text-shadow:
+        0 0 12px rgba(0, 140, 255, 0.6),
+        0 0 24px rgba(0, 140, 255, 0.4);
+}
+
+/* خلفية Gradient محسّنة */
+body {
+    background: radial-gradient(circle at top right, #0d1220, #090d15 60%);
+}
+
+/* فاصل ناعم بين الرسائل */
+.chats-container .message {
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* ============================= */
+/*   تخصيص رسالة الذكاء الاصطناعي   */
+/* ============================= */
+
+/* شكل رسالة البوت */
+.chats-container .bot-message .message-text {
+    background: rgba(0, 140, 255, 0.12); /* لون مختلف */
+    border-radius: 13px 13px 3px 13px;   /* Border Radius مميز */
+    padding: 12px 16px;
+    max-width: 75%;
+    color: var(--text-color);
+}
+
+/* شكل رسالة المستخدم */
+.chats-container .user-message .message-text {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 13px 13px 13px 3px;
+}
+
+/* ============================= */
+/*   رفع الـ GIF فوق الرسالة     */
+/* ============================= */
+
+.chats-container .bot-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* نخلي الـGIF جنب الـAvatar */
+.chats-container .bot-message.loading .message-text img {
+    width: 45px;
+    margin-top: 0;
+    margin-right: 5px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* نخلي النص يبدأ بعد الـGIF */
+.chats-container .bot-message .message-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* تصغير حجم رسالة التحميل */
+.bot-message.loading .message-text {
+    padding: 6px 10px !important;
+    min-height: auto !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* تصغير الـGIF نفسه */
+.bot-message.loading .message-text img {
+    width: 40px !important;
+    height: 40px !important;
+}
