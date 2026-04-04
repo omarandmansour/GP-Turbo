@@ -56,6 +56,23 @@ const generateResponse = async (botMsgDiv) => {
     });
 
     try {
+        // تجهيز محتوى رسالة المستخدم (نص + صورة لو موجودة)
+        const userContent = [];
+
+        // النص
+        userContent.push({
+            type: "text",
+            text: userData.message
+        });
+
+        // الصورة (لو موجودة)
+        if (userData.file.data && userData.file.isImage) {
+            userContent.push({
+                type: "image_url",
+                image_url: `data:${userData.file.mime_type};base64,${userData.file.data}`
+            });
+        }
+
         const response = await fetch(API_URL, {
             method: "POST",
             headers: {
@@ -63,28 +80,32 @@ const generateResponse = async (botMsgDiv) => {
                 "Authorization": `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "llama-3.2-11b-vision", // ✅ موديل Vision
                 messages: [
                     {
-    role: "system",
-    content: `
-انت مساعد مفيد وذكي واسمك جي بي توربو او GPTurbo
+                        role: "system",
+                        content: `
+أنت مساعد ذكي باسم جي بي توربو.
 مهمتك:
-- الرد باللغة التي يكتب بها المستخدم (العربية الفصحى أو المصرية) او اي لغة ثانية حتى.
+- الرد بنفس اللغة التي يكتب بها المستخدم (عربي، إنجليزي، أو أي لغة أخرى).
 - الرد يكون واضح، مختصر، ومباشر.
-- ممنوع اختراع كلمات أو دمج لغات.
-- التزم باللهجة العربية الفصحى أو المصرية حسب أسلوب المستخدم.
-- كن محترفًا، سريعًا، ودقيقًا.
-- لا تذكر أنك نموذج لغة أو أنك مدرب على بيانات.
-- قدم إجابات عملية ومفيدة دائمًا.
+- ممنوع اختراع كلمات أو دمج لغات مختلفة في نفس الجملة.
+- التزم بأسلوب المستخدم: فصحى، عامية مصرية، أو أي لغة أخرى.
+- كن محترفًا، دقيقًا، ومفيدًا.
+- لا تذكر أنك نموذج ذكاء اصطناعي أو أنك مدرب على بيانات.
+- قدم إجابات عملية ومباشرة دائمًا.
 `
-},
-
-                    
+                    },
+                    // التاريخ السابق كنص فقط (بدون صور)
                     ...chatHistory.map(msg => ({
                         role: msg.role,
                         content: msg.content
-                    }))
+                    })),
+                    // آخر رسالة من المستخدم (نص + صورة لو فيه)
+                    {
+                        role: "user",
+                        content: userContent
+                    }
                 ]
             }),
             signal: controller.signal
@@ -93,9 +114,7 @@ const generateResponse = async (botMsgDiv) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error?.message || "Error");
 
-        // قراءة رد Llama
         const responseText = data.choices[0].message.content;
-
         typingEffect(responseText, textElement, botMsgDiv);
 
         chatHistory.push({
@@ -153,9 +172,9 @@ const handleFormSubmit = (e) => {
 
     setTimeout(() => {
         const botMsgHTML = `
-        <img src="b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
+        <img src="Images/b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
         <p class="message-text">
-            <img src="output-onlinegiftools.gif" style="width: 50px;">
+            <img src="Images/output-onlinegiftools.gif" style="width: 50px;">
         </p>`;
 
         const botMsgDiv = createMsgElement(
