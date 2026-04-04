@@ -56,22 +56,8 @@ const generateResponse = async (botMsgDiv) => {
     });
 
     try {
-        // تجهيز محتوى رسالة المستخدم (نص + صورة لو موجودة)
-        const userContent = [];
-
-        // النص
-        userContent.push({
-            type: "text",
-            text: userData.message
-        });
-
-        // الصورة (لو موجودة)
-        if (userData.file.data && userData.file.isImage) {
-            userContent.push({
-                type: "image_url",
-                image_url: `data:${userData.file.mime_type};base64,${userData.file.data}`
-            });
-        }
+        // محتوى المستخدم كنص فقط (حتى لو فيه صورة، الموديل ده Text فقط)
+        const userContent = userData.message;
 
         const response = await fetch(API_URL, {
             method: "POST",
@@ -80,28 +66,26 @@ const generateResponse = async (botMsgDiv) => {
                 "Authorization": `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-                model: "llama-3.2-11b-vision", // ✅ موديل Vision
+                model: "llama-3.3-70b-versatile", // ✅ رجعناه للموديل المستقر
                 messages: [
                     {
                         role: "system",
                         content: `
-أنت مساعد ذكي باسم جي بي توربو.
+أنت مساعد ذكي باسم "جي بي توربو".
 مهمتك:
-- الرد بنفس اللغة التي يكتب بها المستخدم (عربي، إنجليزي، أو أي لغة أخرى).
-- الرد يكون واضح، مختصر، ومباشر.
+- الرد بنفس اللغة التي يكتب بها المستخدم.
+- الرد يكون واضحًا، مباشرًا، ومفهومًا، دون أن يكون مقتضبًا جدًا.
 - ممنوع اختراع كلمات أو دمج لغات مختلفة في نفس الجملة.
-- التزم بأسلوب المستخدم: فصحى، عامية مصرية، أو أي لغة أخرى.
+- التزم بأسلوب المستخدم: فصحى، عامية مصرية، أو أي لغة أخرى يكتب بها.
 - كن محترفًا، دقيقًا، ومفيدًا.
 - لا تذكر أنك نموذج ذكاء اصطناعي أو أنك مدرب على بيانات.
-- قدم إجابات عملية ومباشرة دائمًا.
+- قدم إجابات عملية ومفيدة دائمًا.
 `
                     },
-                    // التاريخ السابق كنص فقط (بدون صور)
                     ...chatHistory.map(msg => ({
                         role: msg.role,
                         content: msg.content
                     })),
-                    // آخر رسالة من المستخدم (نص + صورة لو فيه)
                     {
                         role: "user",
                         content: userContent
@@ -172,9 +156,9 @@ const handleFormSubmit = (e) => {
 
     setTimeout(() => {
         const botMsgHTML = `
-        <img src="b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
+        <img src="Images/b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
         <p class="message-text">
-            <img src="output-onlinegiftools.gif" style="width: 50px;">
+            <img src="Images/output-onlinegiftools.gif" style="width: 50px;">
         </p>`;
 
         const botMsgDiv = createMsgElement(
