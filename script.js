@@ -17,7 +17,7 @@ require('dotenv').config(); // تحميل المتغيرات من ملف .env
 
   // إعدادات افتراضية
   let provider = "groq"; // "groq" أو "llama"
-  const API_KEY = process.env.API_KEY; // المفتاح من ملف .env
+  const API_KEY = process.env.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; // المفتاح من ملف .env
   let API_URL = "https://api.groq.com/openai/v1/chat/completions";
   let MODEL = "gpt-like-model";
   let MAX_TOKENS = 800;
