@@ -16,7 +16,7 @@
 
   // إعدادات افتراضية (قابل للتعديل)
   let provider = "groq"; // "groq" أو "llama"
-  let API_KEY = "REPLACE_WITH_YOUR_API_KEY";
+  let API_KEY = "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";
   let API_URL = "https://api.groq.com/openai/v1/chat/completions"; // افتراضي Groq
   let MODEL = "gpt-like-model";
   let MAX_TOKENS = 800;
