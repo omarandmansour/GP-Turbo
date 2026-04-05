@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let provider = "groq"; // "groq" أو "llama"
   const API_KEY = (typeof process !== "undefined" && process.env && process.env.API_KEY)
     ? process.env.API_KEY
-    : (typeof window !== "undefined" && window.__API_KEY__) ? window.__API_KEY__ : "";
+    : (typeof window !== "undefined" && window.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) ? window.__API_KEY__ : "";
   let API_URL = "https://api.groq.com/openai/v1/chat/completions";
   let MODEL = "gpt-like-model";
   let MAX_TOKENS = 800;
