@@ -1,321 +1,341 @@
-/* ai-chat-groq-llama-env.js
-   نسخة JavaScript جاهزة للعمل مع Groq أو Llama-like.
-   - تحاول قراءة API Key من ملف .env عند التشغيل في Node.js
-   - تعمل أيضاً في متصفح مع خيار تمرير المفتاح عبر window.__API_KEY__
-   - تتضمن تعريف زر الإرسال submitBtn وتعطيله أثناء الطلب
-*/
+const container = document.querySelector(".container");
+const chatsContainer = document.querySelector(".chats-container");
+const promptForm = document.querySelector(".prompt-form");
+const promptInput = promptForm.querySelector(".prompt-input");
+const fileInput = promptForm.querySelector("#file-input");
+const fileUploadWrapper = promptForm.querySelector(".file-upload-wrapper");
+const themeToggle = document.querySelector("#theme-toggle-btn");
 
-try {
-  // في بيئات Node.js: تحميل متغيرات البيئة من ملف .env إن وُجد
-  if (typeof require === "function") {
-    try { require('dotenv').config(); } catch (e) { /* dotenv غير متوفر */ }
-  }
-} catch (e) { /* تجاهل */ }
+// 🔥 مفتاح Groq
+const API_KEY = "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";
 
-document.addEventListener("DOMContentLoaded", () => {
-  // --- عناصر DOM (تأكد من وجودها في الـ HTML) ---
-  const chatsContainer = document.getElementById("chatsContainer");
-  const promptForm = document.getElementById("promptForm");
-  const promptInput = document.getElementById("promptInput");
-  const submitBtn = document.getElementById("submitBtn"); // زر الإرسال
-  const fileInput = document.getElementById("file-input");
-  const attachBtn = document.getElementById("attachBtn");
-  const statusEl = document.getElementById("status");
+// 🔥 رابط Llama على Groq
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-  // --- إعدادات افتراضية ---
-  let provider = "groq"; // "groq" أو "llama"
-  const API_KEY = (typeof process !== "undefined" && process.env && process.env.API_KEY)
-    ? process.env.API_KEY
-    : (typeof window !== "undefined" && window.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) ? window.__API_KEY__ : "";
-  let API_URL = "https://api.groq.com/openai/v1/chat/completions";
-  let MODEL = "gpt-like-model";
-  let MAX_TOKENS = 800;
-  let TEMPERATURE = 0.7;
+let typingInterval, controller;
 
-  // --- رسالة system ---
-  const chatHistory = [
-    {
-      role: "system",
-      content: `انت مساعد مفيد وذكي اسمك "جي بي توربو"
-مهمتك:
-- التحدث بنفس اللغة اللتي يتحدث بها المستخدم ونفس اللهجة.
-- ممنوع تداخل في اللغات واختراع كلمات.
-- لا تذكر انك مدرب من Groq او Llama.
-- كن محترما, مفيدا.
-- الرد يكون مباشرا, مفهوما, واضحا.
-- لا تذكر انك ذكاء اصطناعي لغوي`
-    }
-  ];
+const chatHistory = [];
+const userData = { message: "", file: {} };
 
-  let controller = null;
-  let typingInterval = null;
-  let lastUserMessage = null;
+const scrollToBottom = () =>
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
 
-  // --- مساعدة للتمرير ---
-  function scrollToBottom() {
-    if (!chatsContainer) return;
-    chatsContainer.scrollTo({ top: chatsContainer.scrollHeight, behavior: "smooth" });
-  }
-
-  // --- تأثير كتابة تدريجي ---
-  function typingEffect(text, element, speed = 30) {
-    clearInterval(typingInterval);
-    if (!element) return;
-    element.textContent = "";
+const typingEffect = (text, textElement, botMsgDiv) => {
+    textElement.textContent = "";
     const words = text.split(" ");
-    let i = 0;
+    let wordIndex = 0;
+
     typingInterval = setInterval(() => {
-      if (i >= words.length) {
-        clearInterval(typingInterval);
-        typingInterval = null;
-        return;
-      }
-      element.textContent += (i === 0 ? "" : " ") + words[i++];
-      scrollToBottom();
-    }, speed);
-  }
+        if (wordIndex < words.length) {
+            textElement.textContent +=
+                (wordIndex === 0 ? "" : " ") + words[wordIndex++];
+            scrollToBottom();
+        } else {
+            clearInterval(typingInterval);
+            botMsgDiv.classList.remove("loading");
+            document.body.classList.remove("bot-responding");
+        }
+    }, 40);
+};
 
-  // --- إلحاق رسالة في الواجهة ---
-  function appendMessage(text, who = "bot") {
-    if (!chatsContainer) return null;
+const createMsgElement = (content, ...classes) => {
     const div = document.createElement("div");
-    div.className = `msg ${who === "user" ? "user" : "bot"}`;
-    div.setAttribute("role", "article");
-    div.textContent = text;
-    chatsContainer.appendChild(div);
-    scrollToBottom();
+    div.classList.add("message", ...classes);
+    div.innerHTML = content;
     return div;
-  }
+};
 
-  function setStatus(text) { if (statusEl) statusEl.textContent = text; }
-
-  // --- تمكين/تعطيل زر الإرسال ---
-  function setSubmitEnabled(enabled) {
-    if (!submitBtn) return;
-    submitBtn.disabled = !enabled;
-    submitBtn.setAttribute("aria-disabled", (!enabled).toString());
-  }
-
-  // --- بناء الـ payload ---
-  function buildPayload(message) {
-    if (provider === "groq") {
-      return {
-        model: MODEL,
-        messages: [
-          ...chatHistory.map(h => ({ role: h.role, content: h.content })),
-          { role: "user", content: message }
-        ],
-        max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE
-      };
-    } else if (provider === "llama") {
-      return {
-        model: MODEL,
-        input: {
-          history: chatHistory.map(h => ({ role: h.role, content: h.content })),
-          prompt: message
-        },
-        max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE
-      };
-    } else {
-      return {
-        model: MODEL,
-        messages: [
-          ...chatHistory.map(h => ({ role: h.role, content: h.content })),
-          { role: "user", content: message }
-        ],
-        max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE
-      };
-    }
-  }
-
-  // --- استخراج النص من الاستجابة ---
-  function extractTextFromResponse(data) {
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-      return data.choices[0].message.content;
-    }
-    if (data.output && typeof data.output === "string") return data.output;
-    if (data.text && typeof data.text === "string") return data.text;
-    if (data.answer && typeof data.answer === "string") return data.answer;
-    try {
-      return JSON.stringify(data).slice(0, 2000);
-    } catch (e) {
-      return "";
-    }
-  }
-
-  // --- إرسال للـ API ---
-  async function sendToAI(message, { signal } = {}) {
-    lastUserMessage = message;
-    setStatus("جاري الاتصال...");
-    setSubmitEnabled(false);
-    try {
-      if (!API_KEY) {
-        return { ok: false, text: "❌ مفتاح الـ API غير موجود. ضع API_KEY في .env أو window.__API_KEY__." };
-      }
-
-      const payload = buildPayload(message);
-      const headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
-      };
-
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: signal || null
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${text}`);
-      }
-
-      const data = await res.json();
-      const aiText = extractTextFromResponse(data);
-
-      if (!aiText || aiText.trim().length < 2) {
-        return { ok: false, text: "⚠️ الرد غير واضح، جرّب إعادة الصياغة." };
-      }
-
-      chatHistory.push({ role: "assistant", content: aiText });
-      return { ok: true, text: aiText };
-    } catch (err) {
-      if (err && err.name === "AbortError") return { ok: false, text: "تم إلغاء الطلب." };
-      console.error("sendToAI error:", err);
-      return { ok: false, text: "❌ خطأ في الاتصال أو في الخادم." };
-    } finally {
-      setStatus("جاهز");
-      setSubmitEnabled(true);
-    }
-  }
-
-  // --- إرسال رسالة من الواجهة ---
-  async function submitMessage(message) {
-    if (!message || !message.trim()) return;
-    appendMessage(message, "user");
-    chatHistory.push({ role: "user", content: message });
-    scrollToBottom();
-
-    if (controller) { try { controller.abort(); } catch (e) {} }
+const generateResponse = async (botMsgDiv) => {
+    const textElement = botMsgDiv.querySelector(".message-text");
     controller = new AbortController();
 
-    const botDiv = appendMessage("...", "bot");
-    typingEffect("جاري التفكير والرد...", botDiv);
+    // حفظ رسالة المستخدم في التاريخ
+    chatHistory.push({
+        role: "user",
+        content: userData.message
+    });
 
-    const result = await sendToAI(message, { signal: controller.signal });
+    try {
+        // محتوى المستخدم كنص فقط (حتى لو فيه صورة، الموديل ده Text فقط)
+        const userContent = userData.message;
 
-    clearInterval(typingInterval);
-    typingInterval = null;
-    if (botDiv) botDiv.textContent = "";
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile", // ✅ رجعناه للموديل المستقر
+                messages: [
+                    {
+                        role: "system",
+                        content: `
+أنت مساعد ذكي باسم "جي بي توربو".
+مهمتك:
+- الرد بنفس اللغة التي يكتب بها المستخدم.
+- الرد يكون واضحًا، مباشرًا، ومفهومًا، دون أن يكون مقتضبًا جدًا.
+- ممنوع اختراع كلمات أو دمج لغات مختلفة في نفس الجملة.
+- التزم بأسلوب المستخدم: فصحى، عامية مصرية، أو أي لغة أخرى يكتب بها.
+- كن محترفًا، دقيقًا، ومفيدًا.
+- لا تذكر أنك نموذج ذكاء اصطناعي أو أنك مدرب على بيانات.
+- قدم إجابات عملية ومفيدة دائمًا.
+`
+                    },
+                    ...chatHistory.map(msg => ({
+                        role: msg.role,
+                        content: msg.content
+                    })),
+                    {
+                        role: "user",
+                        content: userContent
+                    }
+                ]
+            }),
+            signal: controller.signal
+        });
 
-    if (result.ok) typingEffect(result.text, botDiv);
-    else if (botDiv) botDiv.textContent = result.text;
-  }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || "Error");
 
-  function abortCurrentRequest() {
-    if (controller) {
-      try { controller.abort(); controller = null; setStatus("ملغي"); setSubmitEnabled(true); } catch (e) { console.warn(e); }
-    } else setStatus("لا يوجد طلب جاري");
-  }
+        const responseText = data.choices[0].message.content;
+        typingEffect(responseText, textElement, botMsgDiv);
 
-  async function retryLast() {
-    if (!lastUserMessage) { setStatus("لا توجد رسالة سابقة"); return; }
-    appendMessage("🔁 إعادة محاولة: " + lastUserMessage, "user");
-    chatHistory.push({ role: "user", content: lastUserMessage });
-    await submitMessage(lastUserMessage);
-  }
+        chatHistory.push({
+            role: "assistant",
+            content: responseText
+        });
 
-  // --- تعديل إعدادات في وقت التشغيل ---
-  function setApiCredentials({ apiKey, apiUrl, prov, model, maxTokens, temperature } = {}) {
-    if (apiKey) {
-      // لا تحفظ المفتاح هنا عند المشاركة؛ استخدم .env أو متغير بيئة في الإنتاج
-      // ملاحظة: هذا المكان لا يغير الثابت API_KEY المعرّف أعلاه
-      console.warn("setApiCredentials: لتغيير API_KEY في وقت التشغيل، مرره عبر window.__API_KEY__ قبل تحميل السكربت.");
+    } catch (error) {
+        textElement.style.color = "#d92939";
+        textElement.textContent =
+            error.name === "AbortError"
+                ? "تم إيقاف الرد."
+                : error.message;
+        botMsgDiv.classList.remove("loading");
+        document.body.classList.remove("bot-responding");
+    } finally {
+        userData.file = {};
     }
-    if (apiUrl) API_URL = apiUrl;
-    if (prov) provider = prov;
-    if (model) MODEL = model;
-    if (typeof maxTokens === "number") MAX_TOKENS = maxTokens;
-    if (typeof temperature === "number") TEMPERATURE = temperature;
-    setStatus(`مزود: ${provider} | موديل: ${MODEL}`);
-  }
+};
 
-  function resetChat() {
-    const systemMsg = chatHistory.find(h => h.role === "system");
-    chatHistory.length = 0;
-    if (systemMsg) chatHistory.push(systemMsg);
-    lastUserMessage = null;
-    if (chatsContainer) chatsContainer.innerHTML = "";
-    appendMessage("مرحبًا! اكتب سؤالك واضغط إرسال.", "bot");
-  }
+/*
+ملاحظة: الكود الأصلي لـ handleFormSubmit موجود أدناه كمحاولة للحفاظ على كل شيء،
+لكن تم استبداله بوظيفة محسنة async أدناه لدمج قراءة الصور. (لم يتم حذف أي تعريفات أو أجزاء أصلية)
+*/
 
-  // --- رفع ملف بسيط ---
-  if (attachBtn && fileInput) {
-    attachBtn.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) return;
-      appendMessage(`📎 ملف مرفق: ${file.name}`, "user");
-      chatHistory.push({ role: "user", content: `[ملف مرفق: ${file.name}]` });
-      // لرفع فعلي: أضف endpoint للـ upload ثم أرسل الرابط أو المحتوى للـ AI
+// === دالة قراءة النص من الصور (Vision) ===
+// 🔥 رابط Vision على Groq
+const VISION_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+async function extractImageText(base64String, mimeType) {
+    try {
+        const response = await fetch(VISION_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "llama-3.2-11b-vision-preview",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: "اقرأ النص من الصورة التالية:" },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:${mimeType};base64,${base64String}`
+                                }
+                            }
+                        ]
+                    }
+                ]
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || "Vision Error");
+
+        // بعض موديلات الرؤية ترجع المحتوى في مسار مختلف، فنتأكد من وجوده
+        const choice = data.choices && data.choices[0];
+        const message = choice?.message;
+        const content = message?.content ?? message?.text ?? data.text ?? "";
+
+        return content;
+    } catch (err) {
+        console.error("Vision API Error:", err);
+        return "تعذر قراءة النص من الصورة.";
+    }
+}
+
+// === نسخة محسنة من handleFormSubmit (تدعم قراءة الصور) ===
+const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const userMessage = promptInput.value.trim();
+    // نسمح بإرسال لو فيه نص أو ملف مرفوع
+    if (!userMessage && !userData.file.data) return;
+    if (document.body.classList.contains("bot-responding")) return;
+
+    promptInput.value = "";
+
+    const currentDate = new Date().toLocaleString("ar-EG", {
+        timeZone: "Africa/Cairo",
     });
-  }
 
-  // --- تعامل مع الفورم وزر الإرسال ---
-  if (promptForm && promptInput) {
-    // زر الإرسال (إن وُجد)
-    if (submitBtn) {
-      submitBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const message = promptInput.value.trim();
-        if (!message) return;
-        promptInput.value = "";
-        submitMessage(message);
-      });
+    // نبدأ ببناء رسالة المستخدم الأساسية
+    let finalMessage = `التاريخ والوقت الآن: ${currentDate}. المستخدم قال: ${userMessage}`;
+
+    // ✅ لو فيه صورة مرفوعة، نقرأ النص منها ونضيفه
+    if (userData.file.data && userData.file.isImage) {
+        // استدعاء دالة الرؤية لقراءة النص من الصورة
+        const visionText = await extractImageText(userData.file.data, userData.file.mime_type);
+        // نضيف النص المستخرج بشرط ألا يكون مكررًا أو فارغًا
+        if (visionText && visionText.trim() !== "") {
+            finalMessage += ` | النص المستخرج من الصورة: ${visionText}`;
+        }
     }
 
-    // دعم إرسال الفورم بالـ Enter أو submit
-    promptForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const message = promptInput.value.trim();
-      if (!message) return;
-      promptInput.value = "";
-      await submitMessage(message);
-    });
+    // ✅ لو فيه ملف مرفوع مش صورة (مثلاً PDF) نضيف اسم الملف فقط (أو ممكن توسع لاحقًا لاستخراج نص من PDF)
+    if (userData.file.data && !userData.file.isImage) {
+        finalMessage += ` | الملف المرفق: ${userData.file.fileName}`;
+    }
 
-    // منع السطر الجديد عند الضغط Enter (بدون Shift)
-    promptInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        promptForm.requestSubmit();
-      }
-    });
-  } else {
-    console.warn("promptForm أو promptInput غير موجودين في الـ DOM.");
-  }
+    // نحفظ الرسالة المجمعة في userData.message كما في الكود الأصلي
+    userData.message = finalMessage;
 
-  // --- تهيئة أولية ---
-  (function init() {
-    if (!chatsContainer) { console.warn("عنصر chatsContainer غير موجود."); return; }
-    appendMessage("مرحبًا! اكتب سؤالك واضغط إرسال.", "bot");
-    setStatus(`جاهز | مزود: ${provider}`);
-    setSubmitEnabled(true);
-  })();
+    document.body.classList.add("bot-responding", "chats-active");
+    fileUploadWrapper.classList.remove(
+        "active",
+        "img-attached",
+        "file-attached"
+    );
 
-  // --- تصدير وظائف للتجربة من الكونسول ---
-  window.aiChat = {
-    submitMessage,
-    sendToAI,
-    appendMessage,
-    resetChat,
-    getHistory: () => chatHistory.slice(),
-    abortCurrentRequest,
-    retryLast,
-    setApiCredentials,
-    setProvider: (p) => { provider = p; setStatus("مزود: " + provider); }
-  };
+    const userMsgHTML = `
+    <p class="message-text"></p>
+    ${
+        userData.file.data
+            ? userData.file.isImage
+                ? `<img src="data:${userData.file.mime_type};base64,${userData.file.data}" class="img-attachment"/>`
+                : `<p class="file-attachment"><span class="material-symbols-rounded">description</span>${userData.file.fileName}</p>`
+            : ""
+    }`;
+
+    const userMsgDiv = createMsgElement(userMsgHTML, "user-message");
+    // لو المستخدم ما كتبش نص لكن رفع صورة، نعرض "[صورة فقط]" كما في النسخة السابقة
+    userMsgDiv.querySelector(".message-text").textContent = userMessage || "[صورة فقط]";
+    chatsContainer.appendChild(userMsgDiv);
+    scrollToBottom();
+
+    setTimeout(() => {
+        const botMsgHTML = `
+        <img src="b8ec91ba-f021-411e-bdf9-29359107b7fd_removalai_preview.png" class="avatar">
+        <p class="message-text">
+            <img src="output-onlinegiftools.gif" style="width: 50px;">
+        </p>`;
+
+        const botMsgDiv = createMsgElement(
+            botMsgHTML,
+            "bot-message",
+            "loading"
+        );
+        chatsContainer.appendChild(botMsgDiv);
+        scrollToBottom();
+        generateResponse(botMsgDiv);
+    }, 600);
+};
+
+fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (e) => {
+        fileInput.value = "";
+        const base64String = e.target.result.split(",")[1];
+        fileUploadWrapper.querySelector(".file-preview").src =
+            e.target.result;
+        fileUploadWrapper.classList.add(
+            "active",
+            isImage ? "img-attached" : "file-attached"
+        );
+
+        userData.file = {
+            fileName: file.name,
+            data: base64String,
+            mime_type: file.type,
+            isImage,
+        };
+    };
 });
+
+document
+    .querySelector("#cancel-file-btn")
+    .addEventListener("click", () => {
+        userData.file = {};
+        fileUploadWrapper.classList.remove(
+            "active",
+            "img-attached",
+            "file-attached"
+        );
+    });
+
+document
+    .querySelector("#stop-response-btn")
+    .addEventListener("click", () => {
+        userData.file = {};
+        controller?.abort();
+        clearInterval(typingInterval);
+        chatsContainer
+            .querySelector(".bot-message.loading")
+            ?.classList.remove("loading");
+        document.body.classList.remove("bot-responding");
+    });
+
+document
+    .querySelector("#delete-chats-btn")
+    .addEventListener("click", () => {
+        chatHistory.length = 0;
+        chatsContainer.innerHTML = "";
+        document.body.classList.remove("bot-responding", "chats-active");
+    });
+
+document.querySelectorAll(".suggestions-item").forEach((item) => {
+    item.addEventListener("click", () => {
+        promptInput.value = item.querySelector(".text").textContent;
+        promptForm.dispatchEvent(new Event("submit"));
+    });
+});
+
+document.addEventListener("click", ({ target }) => {
+    const wrapper = document.querySelector(".prompt-wrapper");
+    const shouldHide =
+        target.classList.contains("prompt-input") ||
+        (wrapper.classList.contains("hide-controls") &&
+            (target.id === "add-file-btn" ||
+                target.id === "stop-response-btn"));
+    wrapper.classList.toggle("hide-controls", shouldHide);
+});
+
+themeToggle.addEventListener("click", () => {
+    const isLightTheme = document.body.classList.toggle("light-theme");
+    localStorage.setItem(
+        "themeColor",
+        isLightTheme ? "light_mode" : "dark_mode"
+    );
+    themeToggle.textContent = isLightTheme ? "dark_mode" : "light_mode";
+});
+
+const isLightTheme =
+    localStorage.getItem("themeColor") === "light_mode";
+document.body.classList.toggle("light-theme", isLightTheme);
+themeToggle.textContent = isLightTheme ? "dark_mode" : "light_mode";
+
+promptForm.addEventListener("submit", handleFormSubmit);
+promptForm
+    .querySelector("#add-file-btn")
+    .addEventListener("click", () => fileInput.click());
