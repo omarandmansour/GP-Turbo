@@ -1,28 +1,30 @@
-/* ai-chat-groq-llama-with-system.js
+/* ai-chat-groq-llama-env-with-submit.js
    نسخة JavaScript جاهزة للعمل مع Groq أو Llama-like.
-   - ضع هذا الملف في مشروعك واستدعيه بعد عناصر الـ HTML المطلوبة.
-   - غيّر API_KEY و API_URL عبر aiChat.setApiCredentials(...) أو مباشرة في المتغيرات.
-   - **مهم**: تم إضافة رسالة system بالـ content اللي طلبتها.
+   - الـ API Key بيتقرأ من ملف .env (Node.js env في بيئات تدعم ذلك)
+   - يتضمن تعريف زر الإرسال submitBtn وتعطيله أثناء الطلب
 */
 
+require && typeof require === "function" && require('dotenv')?.config?.();
+
 (() => {
-  // عناصر DOM (تأكد من وجودها في الصفحة)
+  // عناصر DOM (تأكد من وجودها في الـ HTML)
   const chatsContainer = document.getElementById("chatsContainer");
   const promptForm = document.getElementById("promptForm");
   const promptInput = document.getElementById("promptInput");
+  const submitBtn = document.getElementById("submitBtn"); // تعريف زر الإرسال
   const fileInput = document.getElementById("file-input");
   const attachBtn = document.getElementById("attachBtn");
   const statusEl = document.getElementById("status");
 
-  // إعدادات افتراضية (قابل للتعديل)
+  // إعدادات افتراضية
   let provider = "groq"; // "groq" أو "llama"
-  let API_KEY = "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";
-  let API_URL = "https://api.groq.com/openai/v1/chat/completions"; // افتراضي Groq
+  const API_KEY = (typeof process !== "undefined" && process.env) ? process.env.API_KEY : (window && window.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) || ""; // قراءة آمنة
+  let API_URL = "https://api.groq.com/openai/v1/chat/completions";
   let MODEL = "gpt-like-model";
   let MAX_TOKENS = 800;
   let TEMPERATURE = 0.7;
 
-  // --- chatHistory يبدأ برسالة system كما طلبت ---
+  // --- رسالة system ---
   const chatHistory = [
     {
       role: "system",
@@ -79,7 +81,14 @@
 
   function setStatus(text) { if (statusEl) statusEl.textContent = text; }
 
-  // --- بناء payload حسب المزود ---
+  // --- تمكين/تعطيل زر الإرسال ---
+  function setSubmitEnabled(enabled) {
+    if (!submitBtn) return;
+    submitBtn.disabled = !enabled;
+    submitBtn.setAttribute("aria-disabled", (!enabled).toString());
+  }
+
+  // --- بناء الـ payload ---
   function buildPayload(message) {
     if (provider === "groq") {
       return {
@@ -92,7 +101,6 @@
         temperature: TEMPERATURE
       };
     } else if (provider === "llama") {
-      // مثال شائع لمزودي Llama-like؛ عدّله حسب واجهة مزودك
       return {
         model: MODEL,
         input: {
@@ -115,7 +123,7 @@
     }
   }
 
-  // --- استخراج نص من استجابة مختلفة الصيغ ---
+  // --- استخراج النص من الاستجابة ---
   function extractTextFromResponse(data) {
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
       return data.choices[0].message.content;
@@ -134,6 +142,7 @@
   async function sendToAI(message, { signal } = {}) {
     lastUserMessage = message;
     setStatus("جاري الاتصال...");
+    setSubmitEnabled(false);
     try {
       const payload = buildPayload(message);
       const headers = {
@@ -156,7 +165,7 @@
       const data = await res.json();
       const aiText = extractTextFromResponse(data);
 
-      if (!aiText || aiText.trim().length < 2 || aiText.toLowerCase().includes("غير واضحة")) {
+      if (!aiText || aiText.trim().length < 2) {
         return { ok: false, text: "⚠️ الرد غير واضح، جرّب إعادة الصياغة." };
       }
 
@@ -168,6 +177,7 @@
       return { ok: false, text: "❌ خطأ في الاتصال أو في الخادم." };
     } finally {
       setStatus("جاهز");
+      setSubmitEnabled(true);
     }
   }
 
@@ -195,7 +205,7 @@
   }
 
   function abortCurrentRequest() {
-    if (controller) { try { controller.abort(); controller = null; setStatus("ملغي"); } catch (e) { console.warn(e); } }
+    if (controller) { try { controller.abort(); controller = null; setStatus("ملغي"); setSubmitEnabled(true); } catch (e) { console.warn(e); } }
     else setStatus("لا يوجد طلب جاري");
   }
 
@@ -208,7 +218,9 @@
 
   // --- تعديل إعدادات في وقت التشغيل ---
   function setApiCredentials({ apiKey, apiUrl, prov, model, maxTokens, temperature } = {}) {
-    if (apiKey) API_KEY = apiKey;
+    if (apiKey) {
+      // لا تحفظ المفتاح هنا عند المشاركة؛ استخدم .env أو متغير بيئة في الإنتاج
+    }
     if (apiUrl) API_URL = apiUrl;
     if (prov) provider = prov;
     if (model) MODEL = model;
@@ -218,7 +230,6 @@
   }
 
   function resetChat() {
-    // نحافظ على رسالة system في البداية عند إعادة التهيئة
     const systemMsg = chatHistory.find(h => h.role === "system");
     chatHistory.length = 0;
     if (systemMsg) chatHistory.push(systemMsg);
@@ -235,12 +246,23 @@
       if (!file) return;
       appendMessage(`📎 ملف مرفق: ${file.name}`, "user");
       chatHistory.push({ role: "user", content: `[ملف مرفق: ${file.name}]` });
-      // لرفع فعلي: أضف endpoint للـ upload ثم أرسل الرابط أو المحتوى للـ AI
     });
   }
 
-  // --- تعامل مع الفورم ---
+  // --- تعامل مع الفورم وزر الإرسال ---
   if (promptForm && promptInput) {
+    // تأكد أن زر الإرسال موجود لتجربة أفضل
+    if (submitBtn) {
+      submitBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const message = promptInput.value.trim();
+        if (!message) return;
+        promptInput.value = "";
+        submitMessage(message);
+      });
+    }
+
+    // دعم الضغط على Enter داخل الحقل
     promptForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const message = promptInput.value.trim();
@@ -248,6 +270,7 @@
       promptInput.value = "";
       await submitMessage(message);
     });
+
     promptInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); promptForm.requestSubmit(); }
     });
@@ -256,9 +279,9 @@
   // --- تهيئة أولية ---
   (function init() {
     if (!chatsContainer) { console.warn("عنصر chatsContainer غير موجود."); return; }
-    // عرض رسالة ترحيب مع الحفاظ على system في التاريخ
     appendMessage("مرحبًا! اكتب سؤالك واضغط إرسال.", "bot");
     setStatus(`جاهز | مزود: ${provider}`);
+    setSubmitEnabled(true);
   })();
 
   // --- تصدير وظائف للتجربة من الكونسول ---
