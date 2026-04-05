@@ -760,9 +760,3 @@ body {
     align-items: center;
     justify-content: center;
 }
-
-/* تصغير الـGIF نفسه */
-.bot-message.loading .message-text img {
-    width: 40px !important;
-    height: 40px !important;
-}
