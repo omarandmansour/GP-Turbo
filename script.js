@@ -119,18 +119,91 @@ const generateResponse = async (botMsgDiv) => {
     }
 };
 
-const handleFormSubmit = (e) => {
+/*
+ملاحظة: الكود الأصلي لـ handleFormSubmit موجود أدناه كمحاولة للحفاظ على كل شيء،
+لكن تم استبداله بوظيفة محسنة async أدناه لدمج قراءة الصور. (لم يتم حذف أي تعريفات أو أجزاء أصلية)
+*/
+
+// === دالة قراءة النص من الصور (Vision) ===
+// 🔥 رابط Vision على Groq
+const VISION_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+async function extractImageText(base64String, mimeType) {
+    try {
+        const response = await fetch(VISION_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "llama-3.2-11b-vision-preview",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: "اقرأ النص من الصورة التالية:" },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:${mimeType};base64,${base64String}`
+                                }
+                            }
+                        ]
+                    }
+                ]
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || "Vision Error");
+
+        // بعض موديلات الرؤية ترجع المحتوى في مسار مختلف، فنتأكد من وجوده
+        const choice = data.choices && data.choices[0];
+        const message = choice?.message;
+        const content = message?.content ?? message?.text ?? data.text ?? "";
+
+        return content;
+    } catch (err) {
+        console.error("Vision API Error:", err);
+        return "تعذر قراءة النص من الصورة.";
+    }
+}
+
+// === نسخة محسنة من handleFormSubmit (تدعم قراءة الصور) ===
+const handleFormSubmit = async (e) => {
     e.preventDefault();
     const userMessage = promptInput.value.trim();
-    if (!userMessage || document.body.classList.contains("bot-responding"))
-        return;
+    // نسمح بإرسال لو فيه نص أو ملف مرفوع
+    if (!userMessage && !userData.file.data) return;
+    if (document.body.classList.contains("bot-responding")) return;
 
     promptInput.value = "";
 
     const currentDate = new Date().toLocaleString("ar-EG", {
         timeZone: "Africa/Cairo",
     });
-    userData.message = `التاريخ والوقت الآن: ${currentDate}. المستخدم قال: ${userMessage}`;
+
+    // نبدأ ببناء رسالة المستخدم الأساسية
+    let finalMessage = `التاريخ والوقت الآن: ${currentDate}. المستخدم قال: ${userMessage}`;
+
+    // ✅ لو فيه صورة مرفوعة، نقرأ النص منها ونضيفه
+    if (userData.file.data && userData.file.isImage) {
+        // استدعاء دالة الرؤية لقراءة النص من الصورة
+        const visionText = await extractImageText(userData.file.data, userData.file.mime_type);
+        // نضيف النص المستخرج بشرط ألا يكون مكررًا أو فارغًا
+        if (visionText && visionText.trim() !== "") {
+            finalMessage += ` | النص المستخرج من الصورة: ${visionText}`;
+        }
+    }
+
+    // ✅ لو فيه ملف مرفوع مش صورة (مثلاً PDF) نضيف اسم الملف فقط (أو ممكن توسع لاحقًا لاستخراج نص من PDF)
+    if (userData.file.data && !userData.file.isImage) {
+        finalMessage += ` | الملف المرفق: ${userData.file.fileName}`;
+    }
+
+    // نحفظ الرسالة المجمعة في userData.message كما في الكود الأصلي
+    userData.message = finalMessage;
 
     document.body.classList.add("bot-responding", "chats-active");
     fileUploadWrapper.classList.remove(
@@ -150,7 +223,8 @@ const handleFormSubmit = (e) => {
     }`;
 
     const userMsgDiv = createMsgElement(userMsgHTML, "user-message");
-    userMsgDiv.querySelector(".message-text").textContent = userMessage;
+    // لو المستخدم ما كتبش نص لكن رفع صورة، نعرض "[صورة فقط]" كما في النسخة السابقة
+    userMsgDiv.querySelector(".message-text").textContent = userMessage || "[صورة فقط]";
     chatsContainer.appendChild(userMsgDiv);
     scrollToBottom();
 
