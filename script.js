@@ -1,24 +1,23 @@
-/* ai-chat-groq-llama-env-with-submit.js
+/* ai-chat-groq-llama-env.js
    نسخة JavaScript جاهزة للعمل مع Groq أو Llama-like.
-   - الـ API Key بيتقرأ من ملف .env (Node.js env في بيئات تدعم ذلك)
-   - يتضمن تعريف زر الإرسال submitBtn وتعطيله أثناء الطلب
+   - الـ API Key بيتقرأ من ملف .env
+   - استخدم مكتبة dotenv لتحميل المتغيرات
 */
 
-require && typeof require === "function" && require('dotenv')?.config?.();
+require('dotenv').config(); // تحميل المتغيرات من ملف .env
 
 (() => {
-  // عناصر DOM (تأكد من وجودها في الـ HTML)
+  // عناصر DOM
   const chatsContainer = document.getElementById("chatsContainer");
   const promptForm = document.getElementById("promptForm");
   const promptInput = document.getElementById("promptInput");
-  const submitBtn = document.getElementById("submitBtn"); // تعريف زر الإرسال
   const fileInput = document.getElementById("file-input");
   const attachBtn = document.getElementById("attachBtn");
   const statusEl = document.getElementById("status");
 
   // إعدادات افتراضية
   let provider = "groq"; // "groq" أو "llama"
-  const API_KEY = (typeof process !== "undefined" && process.env) ? process.env.API_KEY : (window && window.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) || ""; // قراءة آمنة
+  const API_KEY = process.env.API_KEY; // المفتاح من ملف .env
   let API_URL = "https://api.groq.com/openai/v1/chat/completions";
   let MODEL = "gpt-like-model";
   let MAX_TOKENS = 800;
@@ -81,13 +80,6 @@ require && typeof require === "function" && require('dotenv')?.config?.();
 
   function setStatus(text) { if (statusEl) statusEl.textContent = text; }
 
-  // --- تمكين/تعطيل زر الإرسال ---
-  function setSubmitEnabled(enabled) {
-    if (!submitBtn) return;
-    submitBtn.disabled = !enabled;
-    submitBtn.setAttribute("aria-disabled", (!enabled).toString());
-  }
-
   // --- بناء الـ payload ---
   function buildPayload(message) {
     if (provider === "groq") {
@@ -142,7 +134,6 @@ require && typeof require === "function" && require('dotenv')?.config?.();
   async function sendToAI(message, { signal } = {}) {
     lastUserMessage = message;
     setStatus("جاري الاتصال...");
-    setSubmitEnabled(false);
     try {
       const payload = buildPayload(message);
       const headers = {
@@ -177,7 +168,6 @@ require && typeof require === "function" && require('dotenv')?.config?.();
       return { ok: false, text: "❌ خطأ في الاتصال أو في الخادم." };
     } finally {
       setStatus("جاهز");
-      setSubmitEnabled(true);
     }
   }
 
@@ -205,7 +195,7 @@ require && typeof require === "function" && require('dotenv')?.config?.();
   }
 
   function abortCurrentRequest() {
-    if (controller) { try { controller.abort(); controller = null; setStatus("ملغي"); setSubmitEnabled(true); } catch (e) { console.warn(e); } }
+    if (controller) { try { controller.abort(); controller = null; setStatus("ملغي"); } catch (e) { console.warn(e); } }
     else setStatus("لا يوجد طلب جاري");
   }
 
@@ -219,7 +209,9 @@ require && typeof require === "function" && require('dotenv')?.config?.();
   // --- تعديل إعدادات في وقت التشغيل ---
   function setApiCredentials({ apiKey, apiUrl, prov, model, maxTokens, temperature } = {}) {
     if (apiKey) {
-      // لا تحفظ المفتاح هنا عند المشاركة؛ استخدم .env أو متغير بيئة في الإنتاج
+      // ملاحظة: لا تحفظ المفتاح هنا في الكود عند المشاركة؛ هذا مجرد خيار محلي للتجربة
+      // لكن يفضل استخدام ملف .env أو متغير بيئة في الإنتاج
+      // API_KEY = apiKey; // إذا أردت السماح بالتغيير ديناميكياً، قم بإلغاء التعليق مع الحذر
     }
     if (apiUrl) API_URL = apiUrl;
     if (prov) provider = prov;
@@ -230,6 +222,7 @@ require && typeof require === "function" && require('dotenv')?.config?.();
   }
 
   function resetChat() {
+    // نحافظ على رسالة system في البداية عند إعادة التهيئة
     const systemMsg = chatHistory.find(h => h.role === "system");
     chatHistory.length = 0;
     if (systemMsg) chatHistory.push(systemMsg);
@@ -246,23 +239,12 @@ require && typeof require === "function" && require('dotenv')?.config?.();
       if (!file) return;
       appendMessage(`📎 ملف مرفق: ${file.name}`, "user");
       chatHistory.push({ role: "user", content: `[ملف مرفق: ${file.name}]` });
+      // لرفع فعلي: أضف endpoint للـ upload ثم أرسل الرابط أو المحتوى للـ AI
     });
   }
 
-  // --- تعامل مع الفورم وزر الإرسال ---
+  // --- تعامل مع الفورم ---
   if (promptForm && promptInput) {
-    // تأكد أن زر الإرسال موجود لتجربة أفضل
-    if (submitBtn) {
-      submitBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const message = promptInput.value.trim();
-        if (!message) return;
-        promptInput.value = "";
-        submitMessage(message);
-      });
-    }
-
-    // دعم الضغط على Enter داخل الحقل
     promptForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const message = promptInput.value.trim();
@@ -270,7 +252,6 @@ require && typeof require === "function" && require('dotenv')?.config?.();
       promptInput.value = "";
       await submitMessage(message);
     });
-
     promptInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); promptForm.requestSubmit(); }
     });
@@ -279,9 +260,9 @@ require && typeof require === "function" && require('dotenv')?.config?.();
   // --- تهيئة أولية ---
   (function init() {
     if (!chatsContainer) { console.warn("عنصر chatsContainer غير موجود."); return; }
+    // عرض رسالة ترحيب مع الحفاظ على system في التاريخ
     appendMessage("مرحبًا! اكتب سؤالك واضغط إرسال.", "bot");
     setStatus(`جاهز | مزود: ${provider}`);
-    setSubmitEnabled(true);
   })();
 
   // --- تصدير وظائف للتجربة من الكونسول ---
