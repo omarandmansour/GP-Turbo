@@ -7,7 +7,7 @@ const fileUploadWrapper = promptForm.querySelector(".file-upload-wrapper");
 const themeToggle = document.querySelector("#theme-toggle-btn");
 
 // 🔥 مفتاح Groq
-const API_KEY = "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";
+const API_KEY = "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";
 
 // 🔥 رابط Llama على Groq
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
