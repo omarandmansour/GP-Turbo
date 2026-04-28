@@ -37,19 +37,10 @@ const typingEffect = (text, textElement, botMsgDiv) => {
   }, 40);
 };
 
-const createMsgElement = (content, ...classes) => {
-  const div = document.createElement("div");
-  div.classList.add("message", ...classes);
-  div.innerHTML = content;
-  return div;
-};
-
-// توليد الاستجابة من السيرفر
 const generateResponse = async (botMsgDiv) => {
   const textElement = botMsgDiv.querySelector(".message-text");
   controller = new AbortController();
 
-  // جهز محتوى الرسالة المرسلة للخادم بصيغة متوافقة
   const userParts = [{ text: userData.message }];
 
   if (userData.file && userData.file.data) {
@@ -62,6 +53,86 @@ const generateResponse = async (botMsgDiv) => {
       }
     });
   }
+
+  // أضف رسالة المستخدم إلى الـ chatHistory
+  chatHistory.push({
+    role: "user",
+    parts: userParts
+  });
+
+  const payload = { contents: chatHistory };
+
+  // DEBUG: طباعة الرابط والبيانات قبل الإرسال
+  console.log("API_URL:", API_URL);
+  console.log("Payload:", payload);
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    // DEBUG: طباعة حالة الاستجابة
+    console.log("Response status:", response.status, response.statusText);
+    const contentType = response.headers.get("content-type") || "";
+    console.log("Response content-type:", contentType);
+
+    let data;
+    if (contentType.includes("application/json")) {
+      // محاولة قراءة JSON مع حماية من خطأ parse
+      try {
+        data = await response.json();
+        console.log("Response JSON:", data);
+      } catch (e) {
+        const raw = await response.text();
+        console.warn("Failed to parse JSON, raw response:", raw);
+        data = { rawText: raw };
+      }
+    } else {
+      const text = await response.text();
+      data = { rawText: text };
+      console.log("Response text:", text);
+    }
+
+    if (!response.ok) {
+      const errMsg = data?.error?.message || data?.message || data?.rawText || response.statusText;
+      throw new Error(`Server error: ${errMsg} (status ${response.status})`);
+    }
+
+    // استخراج نص الرد
+    let responseText = "";
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      responseText = data.candidates[0].content.parts[0].text;
+    } else if (data?.output) {
+      responseText = data.output;
+    } else if (data?.rawText) {
+      responseText = data.rawText;
+    } else {
+      responseText = JSON.stringify(data);
+    }
+
+    responseText = responseText.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
+    typingEffect(responseText, textElement, botMsgDiv);
+    chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+  } catch (error) {
+    console.error("generateResponse error:", error);
+    textElement.style.color = "#d92939";
+    if (error.name === "AbortError") {
+      textElement.textContent = "تم توقيف التفكير.";
+    } else if (error.message.includes("Failed to fetch")) {
+      textElement.textContent = "فشل الاتصال بالخادم. احتمال مشكلة CORS أو الشبكة.";
+    } else {
+      textElement.textContent = error.message;
+    }
+    botMsgDiv.classList.remove("loading");
+    document.body.classList.remove("bot-responding");
+  } finally {
+    userData.file = {};
+  }
+};
+
 
   // أضف رسالة المستخدم إلى الـ chatHistory
   chatHistory.push({
