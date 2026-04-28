@@ -7,7 +7,7 @@ const fileInput = promptForm.querySelector("#file-input");
 const fileUploadWrapper = promptForm.querySelector(".file-upload-wrapper");
 const themeToggle = document.querySelector("#theme-toggle-btn");
 
-const API_URL = `server.php`;
+const API_URL = `https://codex.omarelmoghazy2016.workers.dev/`;
 
 let typingInterval = null;
 let controller = null;
