@@ -1,1 +1,5 @@
-
+name = "codex"
+main = "index.js"
+compatibility_date = "2026-01-01"
+type = "javascript"
+account_id = "6dda60ddb903c005193ef39bd7d823cf"
