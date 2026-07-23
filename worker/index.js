@@ -97,7 +97,7 @@ export default {
 
 function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin": "https://omarandmansour.github.io",
+    "Access-Control-Allow-Origin": "https://omarandmansour.github.io/GP-Turbo/",
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
     "Access-Control-Allow-Headers": "Content-Type, Authorization"
   };
